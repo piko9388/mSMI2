@@ -1,29 +1,32 @@
 <!DOCTYPE html>
 <!--
   ═══════════════════════════════════════════════════════════════════
-  mSMI v1.8.5 — material Semiconductor & Market Intelligence
+  mSMI v1.8.6 — material Semiconductor & Market Intelligence
   ═══════════════════════════════════════════════════════════════════
-  v1.8.4 → v1.8.5 (2026-04-23):
+  v1.8.6 → v1.8.6 (2026-04-23):
 
-  [신규 기능]
-  - 📖 가이드 탭 추가 (내장 매뉴얼)
-    · 5개 섹션 Accordion: 개요 · 빠른 시작 · 탭별 기능 · 보고서 · FAQ
-    · 스크린샷 없이도 기능 이해 가능한 구조
-    · 탭 순서: 산업 / 소재 / BP / SKH / Log / 📖 가이드 / ⚙️
+  [🎯 아키텍처 전환 — Report Bundle 중심]
+  - 보고서 생성을 Claude 채팅으로 이관 (iPad fetch abort 해결)
+  - mSMI는 수집·전처리·번들 생성에 집중
+  - 🗂 Report Bundle 신규: Claude에 바로 붙여넣을 수 있는 최적화 패키지
+    · 3가지 크기 (Compact 20KB / Standard 50KB / Full 100KB)
+    · 원문 소스 링크 완전 보존
+    · 보고서 생성 프롬프트 힌트 포함
 
-  [v1.8.4 계승]
-  - Dual-read max_tokens 12,000, timeout 180초 (보고서 잘림 방지)
-  - 소재군 쿼리 3개씩 확장
-  - 🗂 Full Export: 전체 로우데이터 한번에 복사 (Opus 검토용)
-  - 📚 학술 수집: arXiv 연동 (EUV PR/CMP/ALD/HBM 논문)
-  - 보고서 "소재 중장기 기술 로드맵" 섹션
+  [소재 0건 이슈 대응]
+  - 소재 쿼리 각 소재군당 4-5개로 확장
+  - 일반적인 키워드 위주로 재구성
+
+  [iPad Safari 안정성]
+  - Dual-read 12k → 8k (메모리 안정성)
+  - timeout 180s → 120s (빠른 실패)
   ═══════════════════════════════════════════════════════════════════
 -->
 <html lang="ko">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>mSMI v1.8.5 — material Semiconductor & Market Intelligence</title>
+<title>mSMI v1.8.6 — material Semiconductor & Market Intelligence</title>
 <style>
 :root{--navy:#0f1724;--accent:#2563eb;--green:#10b981;--amber:#f59e0b;--red:#ef4444;--purple:#8b5cf6;--bg:#f8f9fb;--card:#fff;--border:#e2e8f0;--text:#1e293b;--sub:#64748b;--muted:#94a3b8;--r:8px;--sh:0 1px 3px rgba(0,0,0,.06)}
 *{margin:0;padding:0;box-sizing:border-box}
@@ -198,7 +201,7 @@ body{font-family:'Malgun Gothic','Trebuchet MS','Segoe UI',sans-serif;background
 .cache-indicator.fresh{color:var(--green)}
 .cache-indicator.stale{color:var(--amber)}
 
-/* v1.8.5: Guide tab */
+/* v1.8.6: Guide tab */
 .guide-wrap{max-width:880px;margin:0 auto}
 .guide-intro{background:linear-gradient(135deg,#0f1724 0%,#1e3a5f 100%);color:#fff;padding:24px 28px;border-radius:12px;margin-bottom:20px}
 .guide-intro h2{font-size:18px;font-weight:700;margin-bottom:6px}
@@ -245,7 +248,16 @@ body{font-family:'Malgun Gothic','Trebuchet MS','Segoe UI',sans-serif;background
 .g-faq-a{font-size:12px;line-height:1.7;color:var(--text);padding-left:14px;border-left:2px solid #e2e8f0;margin-bottom:8px}
 .g-faq-a::before{content:'A. ';font-weight:700;color:var(--green)}
 
-/* v1.8.5 푸터 */
+/* v1.8.6: Bundle modal options */
+.bdl-opt{border:2px solid var(--border);border-radius:8px;padding:12px 14px;cursor:pointer;transition:.15s;background:var(--bg)}
+.bdl-opt:hover{border-color:var(--accent);background:#eff6ff}
+.bdl-opt.on{border-color:var(--accent);background:linear-gradient(135deg,#eff6ff 0%,#dbeafe 100%);box-shadow:0 2px 8px rgba(37,99,235,.15)}
+.bdl-opt-t{font-size:12.5px;font-weight:700;color:var(--navy);margin-bottom:3px}
+.bdl-opt.on .bdl-opt-t{color:var(--accent)}
+.bdl-opt-s{font-size:10.5px;color:var(--sub);font-weight:600;margin-bottom:5px}
+.bdl-opt-d{font-size:10px;color:var(--muted);line-height:1.5}
+
+/* v1.8.6 푸터 */
 .site-footer{margin-top:30px;padding:18px 20px 14px;border-top:1px solid var(--border);background:var(--card);font-size:11px;color:var(--sub);text-align:center;line-height:1.8}
 .site-footer .ft-main{font-size:12px;color:var(--text);font-weight:600;margin-bottom:4px}
 .site-footer .ft-main b{color:var(--accent)}
@@ -257,12 +269,12 @@ body{font-family:'Malgun Gothic','Trebuchet MS','Segoe UI',sans-serif;background
 <body>
 
 <div class="hdr">
-  <div style="cursor:pointer" onclick="goHome()"><div class="logo"><span>m</span>SMI <span style="font-size:11px;color:var(--muted);font-weight:400">v1.8.5</span><span class="cache-indicator" id="cacheInd"></span></div><div class="logo-s">material Semiconductor & Market Intelligence · <span style="color:#a5b4fc">이정훈 TL</span> · SK hynix 소재전략</div></div>
+  <div style="cursor:pointer" onclick="goHome()"><div class="logo"><span>m</span>SMI <span style="font-size:11px;color:var(--muted);font-weight:400">v1.8.6</span><span class="cache-indicator" id="cacheInd"></span></div><div class="logo-s">material Semiconductor & Market Intelligence · <span style="color:#a5b4fc">이정훈 TL</span> · SK hynix 소재전략</div></div>
   <div class="hdr-r">
     <span class="st"><span class="d" id="sDot"></span><span id="sTxt">Ready</span></span>
     <button class="btn" onclick="refreshAll()" id="rBtn">⟳ Refresh</button>
-    <button class="btn" onclick="weeklyReport()" id="wrBtn" title="주간보고 자동 초안">📝 보고</button>
-    <button class="btn" onclick="fullExport()" title="전체 로우데이터 복사 (Opus/타 플랫폼 검토용)">🗂 Full</button>
+    <button class="btn" onclick="showBundleMenu(event)" id="bdlBtn" title="Claude 채팅용 Report Bundle 생성 (권장)">🎁 Bundle</button>
+    <button class="btn" onclick="weeklyReport()" id="wrBtn" title="API로 직접 보고서 생성 (iPad 비권장)">📝 API</button>
     <button class="btn" onclick="exportMd()" title="요약 Markdown">📋</button>
   </div>
 </div>
@@ -434,7 +446,7 @@ body{font-family:'Malgun Gothic','Trebuchet MS','Segoe UI',sans-serif;background
   <h2>📖 mSMI 사용 가이드</h2>
   <p>이 시스템은 SK hynix 소재전략 관점에서 글로벌 반도체 산업·소재·BP사·학술 동향을 자동 수집하고 Dual-read 주간보고서를 생성합니다. 각 섹션을 클릭하면 상세 내용이 펼쳐집니다.</p>
   <div>
-    <span class="gi-stat"><b>버전</b>v1.8.5</span>
+    <span class="gi-stat"><b>버전</b>v1.8.6</span>
     <span class="gi-stat"><b>BP DB</b>156사 (CN 핵심 10)</span>
     <span class="gi-stat"><b>데이터 소스</b>Google News · arXiv</span>
     <span class="gi-stat"><b>LLM</b>Haiku 4.5 · Sonnet 4.6</span>
@@ -575,30 +587,28 @@ body{font-family:'Malgun Gothic','Trebuchet MS','Segoe UI',sans-serif;background
   <div class="guide-acc-b">
 
     <div class="g-section">
-      <h4>📝 3가지 보고서 스타일</h4>
+      <h4>🎁 Report Bundle (권장) — Claude 채팅용</h4>
+      <p><b>v1.8.6 신규</b>: API 호출 없이 Claude 채팅에 붙여넣어 보고서 생성. iPad Safari 타임아웃·fetch abort 문제를 완전히 우회합니다.</p>
+      <p><b>워크플로우</b>: ⟳ Refresh → 🎁 Bundle 버튼 → 크기(Compact/Standard/Full) 선택 → 스타일 선택 → 📋 클립보드 복사 → Claude 채팅에 붙여넣기 → Claude가 보고서 생성.</p>
       <table class="g-table">
-        <thead><tr><th>스타일</th><th>용도</th><th>분량</th><th>비용</th><th>생성 시간</th></tr></thead>
+        <thead><tr><th>크기</th><th>용도</th><th>포함 데이터</th></tr></thead>
         <tbody>
-          <tr><td><b>Executive</b></td><td>경영진 컴팩트 보고</td><td>A4 12-15p</td><td>~150원</td><td>30-60초</td></tr>
-          <tr><td><b>Dual-read</b> ⭐</td><td>임원+엔지니어 동시 대응 (기본)</td><td>A4 30-40p</td><td>~450원</td><td>60-120초</td></tr>
-          <tr><td><b>Prose</b></td><td>기존 외부동향 모니터링 포맷 (v1.7 호환)</td><td>A4 8-10p</td><td>~100원</td><td>20-40초</td></tr>
+          <tr><td><b>Compact</b></td><td>빠른 생성 · Sonnet/Haiku</td><td>산업 15 · 소재 10 · BP 20 · SKH 10 · 논문 5 (≈20KB)</td></tr>
+          <tr><td><b>Standard</b> ⭐</td><td>주간보고 표준 (권장)</td><td>산업 30 · 소재 20 · BP 50 · SKH 15 · 논문 10 (≈50KB)</td></tr>
+          <tr><td><b>Full</b></td><td>Opus 심층 분석</td><td>전체 수집 데이터 + 메타 (≈100KB)</td></tr>
         </tbody>
       </table>
-      <p>기본값은 Dual-read. 설정 탭 → Weekly Report 스타일에서 변경 가능. Dual-read는 표 + 서술 구조로 스캔과 심층 이해 양쪽 커버.</p>
     </div>
 
     <div class="g-section">
-      <h4>📋 Dual-read 구조 (7개 섹션)</h4>
+      <h4>📝 API 직접 생성 (📝 API 버튼)</h4>
+      <p><b>비권장 (iPad)</b>: Anthropic API를 직접 호출하여 mSMI 내에서 보고서 생성. iPad Safari에서 fetch abort 빈발하므로 PC Chrome에서만 권장.</p>
       <table class="g-table">
-        <thead><tr><th style="width:20%">섹션</th><th>내용</th></tr></thead>
+        <thead><tr><th>스타일</th><th>용도</th><th>분량</th><th>비용</th><th>생성 시간</th></tr></thead>
         <tbody>
-          <tr><td>📊 Executive Summary</td><td>금주 핵심 5대 변화 + 진영별 한 줄 요약</td></tr>
-          <tr><td>1. 칩메이커 동향</td><td>SK hynix · 삼성 · MU · 중국 · 파운드리 (표+서술)</td></tr>
-          <tr><td>2. 소재 BP 동향</td><td>Photo · Chem · Slurry · PGas · Pre · 기타 통합 (소재군별)</td></tr>
-          <tr><td>3. 🇨🇳 중국 로컬 BP</td><td>금주 이벤트 표 + 해석 3-5문장</td></tr>
-          <tr><td>4. 그 외 BP & 리스크</td><td>통합 표 (리스크 시그널 포함)</td></tr>
-          <tr><td>5. 🔬 소재 중장기 기술 로드맵</td><td>학술 동향 + 소재군별 2-3년 진화 방향 + 전략적 시사점</td></tr>
-          <tr><td>6. 참고문헌</td><td>본문 인용 번호 전체</td></tr>
+          <tr><td><b>Executive</b></td><td>경영진 컴팩트</td><td>A4 12-15p</td><td>~150원</td><td>30-60초</td></tr>
+          <tr><td><b>Dual-read</b></td><td>임원+엔지니어</td><td>A4 25-30p</td><td>~350원</td><td>60-120초</td></tr>
+          <tr><td><b>Prose</b></td><td>줄글 v1.7 호환</td><td>A4 8-10p</td><td>~100원</td><td>20-40초</td></tr>
         </tbody>
       </table>
     </div>
@@ -606,31 +616,24 @@ body{font-family:'Malgun Gothic','Trebuchet MS','Segoe UI',sans-serif;background
     <div class="g-section">
       <h4>⚠️ 절대 준수 원칙 (보고서 출력)</h4>
       <div class="g-callout g-cl-danger">
-        <b>사내 시스템명 절대 금지</b>: mTTTM · mRI · Grade 3.0 · PCCB · 3중 인터락 · pqi · B/C평가 · Fast Track 등은 본문에 포함되지 않습니다. 프롬프트에 명시되어 있으나, 드물게 누락 시 편집 단계에서 수동 삭제하세요.
+        <b>사내 시스템명 절대 금지</b>: mTTTM · mRI · Grade 3.0 · PCCB · 3중 인터락 · pqi · B/C평가 · Fast Track 등은 본문에 포함되지 않습니다. Bundle에서 "사내 용어 금지 지시 강조" 체크박스 활성화 시 프롬프트에 명시됩니다.
       </div>
       <div class="g-callout g-cl-warn">
         <b>시사점 톤 제한</b>: "~검토해야 한다", "~체계 가동" 같은 내부 액션 제안 금지. "~에 주목할 필요가 있다", "~영향을 미칠 수 있다", "~모니터링이 요구된다" 수준 유지.
       </div>
       <div class="g-callout g-cl-ok">
-        <b>신뢰도 표기 (본문 표에만)</b>: <span style="color:#059669;font-weight:700">●</span> 공식 확인 / <span style="color:#d97706;font-weight:700">◐</span> 업계 통설 / <span style="color:#6b7280;font-weight:700">○</span> 추정/관측. Summary 표에는 간결성을 위해 생략.
+        <b>신뢰도 표기 (본문 표에만)</b>: <span style="color:#059669;font-weight:700">●</span> 공식 확인 / <span style="color:#d97706;font-weight:700">◐</span> 업계 통설 / <span style="color:#6b7280;font-weight:700">○</span> 추정/관측.
       </div>
     </div>
 
     <div class="g-section">
-      <h4>🗂 Full Export (Opus/타 플랫폼 검토용)</h4>
-      <p>보고서 모달 하단 또는 헤더의 <span class="g-code">🗂 Full</span> 버튼 클릭 시 수집된 모든 로우데이터 (산업·소재·BP·SKH·논문 전체 기사의 제목+링크+스코어+우선순위+번역+요약)가 Markdown으로 클립보드에 복사됩니다. 예상 크기 30-80KB.</p>
-      <p><b>활용 워크플로우</b>: ① mSMI로 1차 보고서 생성 → ② 🗂 Full Export 클릭 → ③ Opus/ChatGPT 채팅에 붙여넣고 "위 데이터를 Dual-read 방식으로 재구성해줘, 사내 시스템명 금지" 지시 → ④ 두 버전 비교 후 최종본 편집.</p>
-    </div>
-
-    <div class="g-section">
       <h4>📚 학술 데이터 활용 (5. 중장기 로드맵 섹션)</h4>
-      <p>arXiv에서 EUV PR · CMP · ALD precursor · HBM packaging 최신 논문 15편이 자동 수집되어 보고서의 "5. 🔬 소재 중장기 기술 로드맵" 섹션에 반영됩니다.</p>
-      <p>이 섹션은 단순 기사가 아닌 학술 근거 기반으로 2-3년 기술 진화 방향을 정리합니다. Photo / Chemical / Slurry / Precursor / HBM 패키징 5개 축에서 소재 기술 흐름 + 전략적 시사점을 제공합니다.</p>
+      <p>arXiv에서 EUV PR · CMP · ALD precursor · HBM packaging 최신 논문 15편이 자동 수집되어 Bundle에 포함됩니다. Dual-read 스타일 선택 시 "5. 🔬 소재 중장기 기술 로드맵" 섹션에 반영됩니다.</p>
     </div>
 
     <div class="g-section">
       <h4>💾 보고서 이력 관리</h4>
-      <p>생성된 보고서는 localStorage에 최대 20건 자동 저장됩니다. 보고 모달 상단 <span class="g-code">📂 이력</span> 버튼으로 과거 보고서 불러오기·삭제 가능. 스타일별 (Exec/Dual/Prose) 뱃지로 구분 표시.</p>
+      <p>API로 생성된 보고서는 localStorage에 최대 20건 자동 저장됩니다. 보고 모달 상단 <span class="g-code">📂 이력</span> 버튼으로 과거 보고서 불러오기·삭제 가능. Bundle은 클립보드 기반이므로 별도 이력 없음.</p>
     </div>
   </div>
 </div>
@@ -654,7 +657,7 @@ body{font-family:'Malgun Gothic','Trebuchet MS','Segoe UI',sans-serif;background
 
       <div class="g-faq-q">보고서 본문이 중간에 잘립니다.</div>
       <div class="g-faq-a">
-        v1.8.5에서 max_tokens 12,000으로 확대하여 해결되었습니다. 그래도 발생하면 ⚙️ 설정 → Weekly Report 스타일을 Executive로 변경하여 분량을 줄이거나, 🗂 Full Export로 Opus에서 재생성하세요.
+        v1.8.6에서 max_tokens 12,000으로 확대하여 해결되었습니다. 그래도 발생하면 ⚙️ 설정 → Weekly Report 스타일을 Executive로 변경하여 분량을 줄이거나, 🗂 Full Export로 Opus에서 재생성하세요.
       </div>
 
       <div class="g-faq-q">특정 BP 기사가 수집되지 않습니다.</div>
@@ -679,7 +682,7 @@ body{font-family:'Malgun Gothic','Trebuchet MS','Segoe UI',sans-serif;background
 
       <div class="g-faq-q">PDF가 팝업 차단됩니다.</div>
       <div class="g-faq-a">
-        v1.8.5는 팝업 차단 시 Blob URL 새 탭으로 자동 전환됩니다. 새 탭이 열리면 <span class="g-key">Ctrl</span>+<span class="g-key">P</span>로 PDF 저장하세요. iOS Safari는 공유 메뉴에서 PDF 저장.
+        v1.8.6는 팝업 차단 시 Blob URL 새 탭으로 자동 전환됩니다. 새 탭이 열리면 <span class="g-key">Ctrl</span>+<span class="g-key">P</span>로 PDF 저장하세요. iOS Safari는 공유 메뉴에서 PDF 저장.
       </div>
 
       <div class="g-faq-q">이전 v1.7 보고서 스타일과 비교하고 싶습니다.</div>
@@ -877,6 +880,95 @@ body{font-family:'Malgun Gothic','Trebuchet MS','Segoe UI',sans-serif;background
   </div>
 </div>
 
+<!-- [v1.8.6] Report Bundle Modal -->
+<div class="modal-bg" id="bdlModal">
+  <div class="modal" style="max-width:920px">
+    <div class="modal-h">
+      <div>
+        <h2>🎁 Report Bundle — Claude 채팅 전송용 패키지</h2>
+        <div class="modal-meta">수집 데이터를 Claude 대화창에 바로 붙여넣어 보고서를 생성할 수 있는 최적화 번들</div>
+      </div>
+      <button class="modal-x" onclick="closeBundle()">×</button>
+    </div>
+    <div class="modal-b" id="bdlBody" style="padding:20px 24px;background:#fff">
+
+      <div style="background:#eff6ff;border:1px solid #bfdbfe;border-radius:8px;padding:14px 18px;margin-bottom:18px;font-size:12.5px;line-height:1.7;color:#1e3a8a">
+        <b>💡 사용법</b><br>
+        ① 아래 3가지 번들 크기 중 하나 선택 → ② 스타일 템플릿 선택 → ③ "클립보드 복사" → ④ Claude 채팅에 붙여넣기 → ⑤ Claude가 보고서 생성
+      </div>
+
+      <!-- Size Selector -->
+      <div style="margin-bottom:16px">
+        <div style="font-size:12px;font-weight:700;margin-bottom:8px;color:var(--navy)">📏 번들 크기</div>
+        <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px" id="bdlSizeSel">
+          <div class="bdl-opt on" data-size="compact" onclick="selectBundleSize(this)">
+            <div class="bdl-opt-t">Compact</div>
+            <div class="bdl-opt-s">~20KB · Top 기사만</div>
+            <div class="bdl-opt-d">Sonnet/Haiku 빠른 생성용<br>산업 15 · 소재 10 · BP 20 · SKH 10 · 논문 5</div>
+          </div>
+          <div class="bdl-opt" data-size="standard" onclick="selectBundleSize(this)">
+            <div class="bdl-opt-t">Standard ⭐</div>
+            <div class="bdl-opt-s">~50KB · 균형</div>
+            <div class="bdl-opt-d">주간보고 표준 (권장)<br>산업 30 · 소재 20 · BP 전체 · SKH 15 · 논문 10</div>
+          </div>
+          <div class="bdl-opt" data-size="full" onclick="selectBundleSize(this)">
+            <div class="bdl-opt-t">Full</div>
+            <div class="bdl-opt-s">~100KB · 전체</div>
+            <div class="bdl-opt-d">Opus 심층 분석용<br>모든 수집 데이터 + 메타</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Style Selector -->
+      <div style="margin-bottom:16px">
+        <div style="font-size:12px;font-weight:700;margin-bottom:8px;color:var(--navy)">📝 보고서 스타일 템플릿</div>
+        <div style="display:grid;grid-template-columns:repeat(2,1fr);gap:10px" id="bdlStyleSel">
+          <div class="bdl-opt on" data-style="dual" onclick="selectBundleStyle(this)">
+            <div class="bdl-opt-t">Dual-read (임원+엔지니어) ⭐</div>
+            <div class="bdl-opt-s">표 + 서술, A4 30p</div>
+          </div>
+          <div class="bdl-opt" data-style="executive" onclick="selectBundleStyle(this)">
+            <div class="bdl-opt-t">Executive Brief</div>
+            <div class="bdl-opt-s">표 중심, A4 12p</div>
+          </div>
+          <div class="bdl-opt" data-style="prose" onclick="selectBundleStyle(this)">
+            <div class="bdl-opt-t">Prose (줄글 v1.7)</div>
+            <div class="bdl-opt-s">산문 4단락, A4 8p</div>
+          </div>
+          <div class="bdl-opt" data-style="custom" onclick="selectBundleStyle(this)">
+            <div class="bdl-opt-t">Custom (직접 지시)</div>
+            <div class="bdl-opt-s">Claude에게 자유 지시</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Options -->
+      <div style="margin-bottom:16px;display:flex;gap:14px;flex-wrap:wrap;font-size:12px">
+        <label style="display:flex;align-items:center;gap:6px;cursor:pointer"><input type="checkbox" id="bdlOptRef" checked> 원문 링크 포함</label>
+        <label style="display:flex;align-items:center;gap:6px;cursor:pointer"><input type="checkbox" id="bdlOptTr" checked> 번역·요약 포함</label>
+        <label style="display:flex;align-items:center;gap:6px;cursor:pointer"><input type="checkbox" id="bdlOptAca" checked> 학술 논문 포함</label>
+        <label style="display:flex;align-items:center;gap:6px;cursor:pointer"><input type="checkbox" id="bdlOptFilter"> 사내 용어 금지 지시 강조</label>
+      </div>
+
+      <!-- Preview -->
+      <div style="margin-bottom:14px">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
+          <span style="font-size:12px;font-weight:700;color:var(--navy)">👀 번들 미리보기</span>
+          <span id="bdlStat" style="font-size:11px;color:var(--sub)">크기 계산 중...</span>
+        </div>
+        <textarea id="bdlPreview" readonly style="width:100%;height:280px;padding:10px 12px;font-family:'Consolas','Courier New',monospace;font-size:10.5px;line-height:1.5;border:1px solid var(--border);border-radius:6px;background:#f8fafc;color:#334155;resize:vertical"></textarea>
+      </div>
+
+    </div>
+    <div class="modal-f">
+      <span class="meta" id="bdlFinalStat" style="font-size:11px;color:var(--sub)"></span>
+      <button class="btn" onclick="regenerateBundle()">🔄 재생성</button>
+      <button class="btn" onclick="downloadBundle()">💾 .md 다운로드</button>
+      <button class="btn btn-p" onclick="copyBundle()">📋 클립보드 복사</button>
+    </div>
+  </div>
+</div>
+
 <script>
 const BP=[
 {c:'photo',n:'NCK',q:'NCK semiconductor photoresist',qKr:'NCK 반도체',region:'KR'},
@@ -1066,13 +1158,55 @@ const IQ={
   eu:[{q:'ASML semiconductor Europe Infineon',hl:'en',gl:'US',ce:'US:en'},{q:'European Chips Act semiconductor',hl:'en',gl:'US',ce:'US:en'}],
 };
 const MQ={
-  photo:[{q:'photoresist EUV semiconductor',hl:'en',gl:'US',ce:'US:en'},{q:'포토레지스트 반도체 EUV',hl:'ko',gl:'KR',ce:'KR:ko'},{q:'photoresist ArF KrF HBM',hl:'en',gl:'US',ce:'US:en'}],
-  chemical:[{q:'semiconductor wet etch chemical',hl:'en',gl:'US',ce:'US:en'},{q:'반도체 식각액 세정액',hl:'ko',gl:'KR',ce:'KR:ko'},{q:'electronic grade chemical HF ammonia',hl:'en',gl:'US',ce:'US:en'}],
-  slurry:[{q:'CMP slurry pad semiconductor',hl:'en',gl:'US',ce:'US:en'},{q:'CMP 슬러리 반도체 HBM',hl:'ko',gl:'KR',ce:'KR:ko'},{q:'CMP slurry HBM tungsten copper',hl:'en',gl:'US',ce:'US:en'}],
-  pgas:[{q:'electronic specialty gas semiconductor',hl:'en',gl:'US',ce:'US:en'},{q:'반도체 특수가스 NF3',hl:'ko',gl:'KR',ce:'KR:ko'},{q:'NF3 WF6 fluorine gas semiconductor',hl:'en',gl:'US',ce:'US:en'}],
-  precursor:[{q:'ALD CVD precursor semiconductor',hl:'en',gl:'US',ce:'US:en'},{q:'반도체 프리커서 전구체',hl:'ko',gl:'KR',ce:'KR:ko'},{q:'ALD precursor high-k HBM DRAM',hl:'en',gl:'US',ce:'US:en'}],
-  wafer:[{q:'silicon wafer 300mm semiconductor',hl:'en',gl:'US',ce:'US:en'},{q:'실리콘웨이퍼 반도체',hl:'ko',gl:'KR',ce:'KR:ko'},{q:'300mm wafer SUMCO Shin-Etsu SK Siltron',hl:'en',gl:'US',ce:'US:en'}],
-  target:[{q:'sputtering target PVD semiconductor',hl:'en',gl:'US',ce:'US:en'},{q:'반도체 스퍼터링 타겟',hl:'ko',gl:'KR',ce:'KR:ko'},{q:'tantalum copper sputter target semiconductor',hl:'en',gl:'US',ce:'US:en'}],
+  photo:[
+    {q:'photoresist semiconductor',hl:'en',gl:'US',ce:'US:en'},
+    {q:'포토레지스트',hl:'ko',gl:'KR',ce:'KR:ko'},
+    {q:'EUV photoresist',hl:'en',gl:'US',ce:'US:en'},
+    {q:'반도체 포토레지스트',hl:'ko',gl:'KR',ce:'KR:ko'},
+    {q:'photoresist HBM ArF',hl:'en',gl:'US',ce:'US:en'}
+  ],
+  chemical:[
+    {q:'semiconductor chemical',hl:'en',gl:'US',ce:'US:en'},
+    {q:'반도체 케미칼',hl:'ko',gl:'KR',ce:'KR:ko'},
+    {q:'semiconductor etchant cleaner',hl:'en',gl:'US',ce:'US:en'},
+    {q:'반도체 식각액',hl:'ko',gl:'KR',ce:'KR:ko'},
+    {q:'electronic grade chemical',hl:'en',gl:'US',ce:'US:en'}
+  ],
+  slurry:[
+    {q:'CMP slurry',hl:'en',gl:'US',ce:'US:en'},
+    {q:'CMP 슬러리',hl:'ko',gl:'KR',ce:'KR:ko'},
+    {q:'CMP pad semiconductor',hl:'en',gl:'US',ce:'US:en'},
+    {q:'chemical mechanical polishing',hl:'en',gl:'US',ce:'US:en'},
+    {q:'반도체 CMP',hl:'ko',gl:'KR',ce:'KR:ko'}
+  ],
+  pgas:[
+    {q:'semiconductor gas',hl:'en',gl:'US',ce:'US:en'},
+    {q:'반도체 특수가스',hl:'ko',gl:'KR',ce:'KR:ko'},
+    {q:'electronic specialty gas',hl:'en',gl:'US',ce:'US:en'},
+    {q:'NF3 semiconductor',hl:'en',gl:'US',ce:'US:en'},
+    {q:'반도체 가스',hl:'ko',gl:'KR',ce:'KR:ko'}
+  ],
+  precursor:[
+    {q:'ALD precursor',hl:'en',gl:'US',ce:'US:en'},
+    {q:'반도체 전구체',hl:'ko',gl:'KR',ce:'KR:ko'},
+    {q:'CVD precursor semiconductor',hl:'en',gl:'US',ce:'US:en'},
+    {q:'semiconductor precursor',hl:'en',gl:'US',ce:'US:en'},
+    {q:'atomic layer deposition precursor',hl:'en',gl:'US',ce:'US:en'}
+  ],
+  wafer:[
+    {q:'silicon wafer semiconductor',hl:'en',gl:'US',ce:'US:en'},
+    {q:'실리콘 웨이퍼',hl:'ko',gl:'KR',ce:'KR:ko'},
+    {q:'300mm wafer',hl:'en',gl:'US',ce:'US:en'},
+    {q:'반도체 웨이퍼',hl:'ko',gl:'KR',ce:'KR:ko'},
+    {q:'silicon wafer market',hl:'en',gl:'US',ce:'US:en'}
+  ],
+  target:[
+    {q:'sputtering target semiconductor',hl:'en',gl:'US',ce:'US:en'},
+    {q:'스퍼터링 타겟',hl:'ko',gl:'KR',ce:'KR:ko'},
+    {q:'PVD target semiconductor',hl:'en',gl:'US',ce:'US:en'},
+    {q:'반도체 타겟',hl:'ko',gl:'KR',ce:'KR:ko'},
+    {q:'sputter target tantalum copper',hl:'en',gl:'US',ce:'US:en'}
+  ],
 };
 const HQ={
   skh:[{q:'SK하이닉스 HBM 메모리 양산',hl:'ko',gl:'KR',ce:'KR:ko'},{q:'SK하이닉스 투자 팹 청주 이천',hl:'ko',gl:'KR',ce:'KR:ko'},{q:'SK하이닉스 NAND DRAM 기술',hl:'ko',gl:'KR',ce:'KR:ko'},{q:'SK hynix HBM DRAM technology',hl:'en',gl:'US',ce:'US:en'},{q:'SK hynix manufacturing capacity AI',hl:'en',gl:'US',ce:'US:en'}],
@@ -1082,7 +1216,7 @@ const HQ={
   mkt:[{q:'DRAM NAND price forecast HBM',hl:'en',gl:'US',ce:'US:en'},{q:'반도체 메모리 가격 시황',hl:'ko',gl:'KR',ce:'KR:ko'},{q:'memory chip market outlook',hl:'en',gl:'US',ce:'US:en'}],
 };
 
-// [v1.8.5 신규] 학술 논문 수집 — arXiv RSS 기반 소재 기술 동향
+// [v1.8.6 신규] 학술 논문 수집 — arXiv RSS 기반 소재 기술 동향
 // arXiv는 Google News와 다르게 직접 RSS 제공 (CORS 프록시 필요)
 const AQ={
   photo:[{q:'EUV photoresist lithography',url:'http://export.arxiv.org/api/query?search_query=all:%22EUV+photoresist%22&start=0&max_results=10&sortBy=submittedDate&sortOrder=descending'}],
@@ -1174,7 +1308,7 @@ async function fetchRSS(rssUrl,label=''){
   fTot++;
   PRG.currentLabel=label;
   const cfg=loadCfg();
-  // [v1.8.5] 설정된 2개 + 미설정 프록시까지 3단계 폴백 체인
+  // [v1.8.6] 설정된 2개 + 미설정 프록시까지 3단계 폴백 체인
   const configured=[cfg.px1,cfg.px2].filter(p=>p&&p!=='none');
   const allProxies=['corsproxy','allorigins','rss2json'];
   const chain=[...new Set([...configured,...allProxies])]; // 설정 우선, 나머지 보충
@@ -1222,7 +1356,7 @@ function prgTick(){
 }
 function estimateTotalRSS(){
   let n=0; for(const qs of Object.values(IQ))n+=qs.length; for(const qs of Object.values(MQ))n+=qs.length; for(const qs of Object.values(HQ))n+=qs.length;
-  // [v1.8.5] 학술 쿼리 수 포함
+  // [v1.8.6] 학술 쿼리 수 포함
   for(const qs of Object.values(AQ))n+=qs.length;
   const cfg=loadCfg(); const list=getBpListByMode(cfg.bpMode||'top30');
   list.forEach(bp=>{n++; if(bp.qKr)n++; if(bp.qCn)n++;});
@@ -1326,7 +1460,7 @@ function pruneTrCache(maxEntries){
 function saveTrCache(){try{pruneTrCache(); localStorage.setItem('msmi_tr',JSON.stringify(S.tr))}catch(e){log('캐시 저장 실패','err')}}
 function clearTrCache(){if(confirm('번역 캐시 삭제?')){S.tr={};localStorage.removeItem('msmi_tr');updateCacheStats();alert('완료')}}
 
-// [v1.8.5] 결과 캐시 개별 삭제
+// [v1.8.6] 결과 캐시 개별 삭제
 function clearResultsCache(){
   if(!confirm('수집 결과 캐시를 삭제합니다. 다음 Refresh 전까지 데이터가 비어있게 됩니다. 진행?'))return;
   localStorage.removeItem(RESULTS_CACHE_KEY);
@@ -1335,7 +1469,7 @@ function clearResultsCache(){
   updateCacheIndicator();
   toast('결과 캐시 삭제됨','ok');
 }
-// [v1.8.5] 전체 초기화 — 설정 제외한 모든 로컬 데이터 삭제 후 새로고침
+// [v1.8.6] 전체 초기화 — 설정 제외한 모든 로컬 데이터 삭제 후 새로고침
 function clearAllAndReload(){
   if(!confirm('번역 캐시 + 결과 캐시 + 보고서 이력을 모두 삭제하고 페이지를 새로고침합니다. 설정(API Key 등)은 유지됩니다. 진행?'))return;
   localStorage.removeItem('msmi_tr');
@@ -1408,7 +1542,7 @@ async function fetchHx(){
   S.hx=annotate(filterNoise(dedup(all))).slice(0,120);
 }
 
-// [v1.8.5] arXiv 논문 파싱 (Atom feed)
+// [v1.8.6] arXiv 논문 파싱 (Atom feed)
 function parseArxivAtom(text){
   try{
     const doc=new DOMParser().parseFromString(text,'text/xml');
@@ -1427,7 +1561,7 @@ function parseArxivAtom(text){
   }catch(e){return []}
 }
 
-// [v1.8.5] arXiv 직접 fetch (프록시 체인 사용)
+// [v1.8.6] arXiv 직접 fetch (프록시 체인 사용)
 async function fetchArxiv(arxivUrl,label=''){
   fTot++; PRG.currentLabel=label;
   const cfg=loadCfg();
@@ -1592,7 +1726,7 @@ function rLog(){
     <div class="sc"><div class="l">번역 캐시</div><div class="v" style="color:var(--purple)">${Object.keys(S.tr).length}</div></div>`;
 }
 
-// [v1.8.2] 수집 결과 24시간 캐싱 (v1.8.5: 빈 결과 저장 방지)
+// [v1.8.2] 수집 결과 24시간 캐싱 (v1.8.6: 빈 결과 저장 방지)
 function saveResultsCache(){
   try{
     const total=S.ind.length+S.mat.length+S.hx.length+Object.keys(S.bp).length;
@@ -1621,7 +1755,7 @@ function updateCacheIndicator(){
 }
 function restoreFromCache(){
   const cache=loadResultsCache(); if(!cache)return false;
-  // [v1.8.5] 빈 캐시 복원 방지 — 총 아이템 0건이면 무시
+  // [v1.8.6] 빈 캐시 복원 방지 — 총 아이템 0건이면 무시
   const total=(cache.ind?.length||0)+(cache.mat?.length||0)+(cache.hx?.length||0)+Object.keys(cache.bp||{}).length;
   if(total===0){log(`⚠️ 캐시가 비어있어 복원 스킵`,'warn');return false}
   S.ind=cache.ind||[]; S.mat=cache.mat||[]; S.hx=cache.hx||[]; S.bp=cache.bp||{}; S.aca=cache.aca||[];
@@ -1631,7 +1765,7 @@ function restoreFromCache(){
   return true;
 }
 
-// [v1.8.5] 빠른 프록시 헬스 체크 — Refresh 시작 전 프록시 상태 확인
+// [v1.8.6] 빠른 프록시 헬스 체크 — Refresh 시작 전 프록시 상태 확인
 async function quickProxyPing(){
   const testUrl='https://news.google.com/rss/search?q=semiconductor&hl=en&gl=US&ceid=US:en';
   const proxies=['corsproxy','allorigins','rss2json'];
@@ -1655,10 +1789,10 @@ async function quickProxyPing(){
 async function refreshAll(){
   const btn=document.getElementById('rBtn'); btn.disabled=true; btn.textContent='⟳ ...'; document.getElementById('sDot').style.background='var(--amber)'; document.getElementById('sTxt').textContent='Fetching...';
   fOk=0;fFail=0;fTot=0;filteredOut=0; document.getElementById('logP').innerHTML='';
-  log(`🚀 mSMI v1.8.5 — BP ${BP_META.total}사 (기존 ${BP_META.kr} + CN ${BP_META.cn}, 핵심 ${BP_META.cnCore})`,'info');
+  log(`🚀 mSMI v1.8.6 — BP ${BP_META.total}사 (기존 ${BP_META.kr} + CN ${BP_META.cn}, 핵심 ${BP_META.cnCore})`,'info');
   prgStart(); const t0=Date.now();
   try{
-    // [v1.8.5] 프록시 헬스 사전 점검
+    // [v1.8.6] 프록시 헬스 사전 점검
     log('🔍 프록시 헬스 체크 시작...','info');
     const pingResult=await quickProxyPing();
     if(pingResult.working.length===0){
@@ -1674,15 +1808,20 @@ async function refreshAll(){
     log('── Tier 1+2+SKH 병렬 ──','info'); prgStageSet('ind','🏭 산업·소재·SKH 병렬 수집 중...');
     await Promise.all([fetchInd().then(()=>{rInd();prgStageDone('ind')}), fetchMat().then(()=>{rMat();prgStageDone('mat')}), fetchHx().then(()=>{rHx();prgStageDone('hx')})]);
     log('── Tier 3 BP ──','info'); prgStageSet('bp','🔍 BP사 수집 중...'); await fetchBp(); rBp(); prgStageDone('bp');
-    // [v1.8.5] 학술 논문 수집 (비차단 — 실패해도 보고서 생성은 계속)
+    // [v1.8.6] 학술 논문 수집 (비차단 — 실패해도 보고서 생성은 계속)
     log('── 📚 학술 논문 ──','info'); prgStageSet('aca','📚 arXiv 논문 수집 중...');
     try{await fetchAcademic()}catch(e){log(`⚠️ 학술 수집 실패: ${e.message}`,'warn')}
     prgStageDone('aca');
     rLog();
     const dt=Math.round((Date.now()-t0)/1000); log(`✅ Fetch: ${fOk}/${fTot} (${dt}초, 노이즈 ${filteredOut} 제외)`,'ok');
+    // [v1.8.6] 소재 0건 시 안내
+    if(S.mat.length===0 && (S.ind.length>0 || Object.keys(S.bp).length>0)){
+      log(`⚠️ 소재 섹션 0건 — 프록시 응답 문제일 가능성. BP Tier 3에서 소재 관련 정보 확보 가능`,'warn');
+      log(`   대안: 🎁 Bundle 버튼으로 Claude 채팅에서 직접 보고서 생성 권장`,'info');
+    }
     document.getElementById('sTxt').textContent=`${new Date().toLocaleTimeString('ko-KR')} (${fOk}/${fTot})`; document.getElementById('sDot').style.background=fOk>0?'var(--green)':'var(--red)';
 
-    // [v1.8.5] 수집 결과 0건 시 명확한 안내
+    // [v1.8.6] 수집 결과 0건 시 명확한 안내
     const totalItems=S.ind.length+S.mat.length+S.hx.length+Object.keys(S.bp).length;
     if(totalItems===0){
       log(`❌ 수집 결과 0건 — 프록시/쿼리/네트워크 문제 가능성`,'err');
@@ -1700,7 +1839,7 @@ async function refreshAll(){
 
 function exportMd(){
   const l=[]; const now=new Date().toLocaleString('ko-KR');
-  l.push(`# mSMI v1.8.5 Report — ${now}\n`);
+  l.push(`# mSMI v1.8.6 Report — ${now}\n`);
   l.push(`## 1. 반도체 산업 (${S.ind.length}건, 🎯 점수순)\n`);
   const sortedInd=sortItems(S.ind,'relevance'); const br={}; sortedInd.forEach(i=>{(br[i.region]=br[i.region]||[]).push(i)});
   for(const[r,items] of Object.entries(br)){ l.push(`### ${RL[r]||r} (${items.length}건)`); items.slice(0,8).forEach(i=>{const tr=S.tr[hash(i.title)]; const sum=tr?(tr.text.match(/요약:\s*(.+)/)||[])[1]||'':''; l.push(`- 🎯${i._score} ${i.title}${sum?`\n  └ ${sum}`:''}\n  └ 🔗 ${i.link}`)}); l.push(''); }
@@ -1715,14 +1854,14 @@ function exportMd(){
   navigator.clipboard.writeText(t).then(()=>toast('클립보드 복사 완료','ok')).catch(()=>{const b=new Blob([t],{type:'text/markdown'});const a=document.createElement('a');a.href=URL.createObjectURL(b);a.download=`mSMI_${new Date().toISOString().slice(0,10)}.md`;a.click();toast('MD 파일 다운로드','ok')});
 }
 
-// [v1.8.5] Full Export — Opus/타 플랫폼 크로스 검토용 전체 로우데이터 덤프
+// [v1.8.6] Full Export — Opus/타 플랫폼 크로스 검토용 전체 로우데이터 덤프
 function fullExport(){
   const L=[]; const now=new Date().toLocaleString('ko-KR');
   const total=S.ind.length+S.mat.length+S.hx.length+Object.keys(S.bp).length+(S.aca?.length||0);
   if(total===0){toast('수집된 데이터 없음 — 먼저 Refresh','err');return}
 
-  L.push(`# mSMI v1.8.5 Full Raw Data Export`);
-  L.push(`**생성**: ${now} · **시스템**: mSMI v1.8.5 · SK hynix 소재전략`);
+  L.push(`# mSMI v1.8.6 Full Raw Data Export`);
+  L.push(`**생성**: ${now} · **시스템**: mSMI v1.8.6 · SK hynix 소재전략`);
   L.push(`**수집 총계**: 산업 ${S.ind.length} · 소재 ${S.mat.length} · BP ${Object.keys(S.bp).length}사 · SKH ${S.hx.length} · 논문 ${S.aca?.length||0}`);
   L.push(`**용도**: Opus/ChatGPT/타 LLM 플랫폼에서 보고서 재구성·크로스 검토\n`);
   L.push(`---\n`);
@@ -1841,6 +1980,384 @@ function fullExport(){
 }
 window.fullExport=fullExport;
 
+// ═══════════════════════════════════════════════════════════════════
+// [v1.8.6] Report Bundle — Claude 채팅 전송용 최적화 번들
+// ═══════════════════════════════════════════════════════════════════
+
+let BDL_STATE={size:'compact',style:'dual',options:{ref:true,tr:true,aca:true,filter:false}};
+
+window.showBundleMenu=function(ev){
+  const total=S.ind.length+S.mat.length+S.hx.length+Object.keys(S.bp).length;
+  if(total===0){toast('수집된 데이터 없음 — 먼저 Refresh','err');return}
+  document.getElementById('bdlModal').classList.add('on');
+  // 기본값 초기화
+  document.querySelectorAll('#bdlSizeSel .bdl-opt').forEach(el=>el.classList.toggle('on',el.dataset.size===BDL_STATE.size));
+  document.querySelectorAll('#bdlStyleSel .bdl-opt').forEach(el=>el.classList.toggle('on',el.dataset.style===BDL_STATE.style));
+  // [v1.8.6] DOM 체크박스 → BDL_STATE.options 동기화 (모달 열릴 때)
+  BDL_STATE.options={
+    ref:document.getElementById('bdlOptRef')?.checked??true,
+    tr:document.getElementById('bdlOptTr')?.checked??true,
+    aca:document.getElementById('bdlOptAca')?.checked??true,
+    filter:document.getElementById('bdlOptFilter')?.checked??false
+  };
+  regenerateBundle();
+};
+
+window.closeBundle=function(){document.getElementById('bdlModal').classList.remove('on')};
+
+window.selectBundleSize=function(el){
+  document.querySelectorAll('#bdlSizeSel .bdl-opt').forEach(x=>x.classList.remove('on'));
+  el.classList.add('on');
+  BDL_STATE.size=el.dataset.size;
+  regenerateBundle();
+};
+
+window.selectBundleStyle=function(el){
+  document.querySelectorAll('#bdlStyleSel .bdl-opt').forEach(x=>x.classList.remove('on'));
+  el.classList.add('on');
+  BDL_STATE.style=el.dataset.style;
+  regenerateBundle();
+};
+
+// 번들 생성 메인 함수
+function buildBundle(){
+  // [v1.8.6] BDL_STATE.options에서 읽음 (change 핸들러가 DOM→STATE 동기화)
+  const opts=BDL_STATE.options||{ref:true,tr:true,aca:true,filter:false};
+
+  // [v1.8.6] Markdown-safe sanitizer — HTML/script injection 방지 + javascript: 스킴 차단
+  const mdSafe=(s)=>{
+    if(!s)return '';
+    return String(s)
+      .replace(/<script[\s\S]*?<\/script>/gi,'[script removed]')
+      .replace(/<iframe[\s\S]*?<\/iframe>/gi,'[iframe removed]')
+      .replace(/<[^>]*on\w+\s*=[^>]*>/gi,'[event-handler removed]')
+      .replace(/javascript:/gi,'[js-scheme]:')
+      .replace(/data:text\/html/gi,'[data-html]');
+  };
+  const safeLink=(url)=>{
+    if(!url)return '';
+    const u=String(url).trim();
+    if(/^(javascript|data:text\/html|vbscript):/i.test(u))return '[unsafe-link]';
+    return u;
+  };
+
+  const size=BDL_STATE.size; const style=BDL_STATE.style;
+  const limits={
+    compact:{ind:15,mat:10,bp:20,hx:10,aca:5},
+    standard:{ind:30,mat:20,bp:50,hx:15,aca:10},
+    full:{ind:100,mat:80,bp:200,hx:80,aca:15}
+  }[size];
+
+  const L=[];
+  const now=new Date().toLocaleString('ko-KR');
+  const period=`${new Date(Date.now()-7*864e5).toLocaleDateString('ko-KR')} ~ ${new Date().toLocaleDateString('ko-KR')}`;
+
+  // ─── 헤더: Claude에게 주는 지시사항 ───
+  L.push(`# 🎁 mSMI Report Bundle — Claude 채팅 전송용`);
+  L.push(`**생성**: ${now} · **기간**: ${period} · **크기**: ${size.toUpperCase()} · **스타일**: ${style.toUpperCase()}`);
+  L.push(`**시스템**: mSMI v1.8.6 · SK hynix 소재전략`);
+  L.push(``);
+  L.push(`---`);
+  L.push(``);
+  L.push(buildStylePrompt(style,period,opts));
+  L.push(``);
+  L.push(`---`);
+  L.push(``);
+  L.push(`# 📥 수집 데이터`);
+  L.push(``);
+
+  // 참조 번호 관리
+  const refs=[]; let refIdx=1;
+  function addRef(item){
+    if(!opts.ref||!item.link)return '';
+    refs.push({idx:refIdx,title:mdSafe(item.title),src:mdSafe(item.src||''),link:safeLink(item.link),date:item.pub?new Date(item.pub).toLocaleDateString('ko-KR'):''});
+    return ` [${refIdx++}]`;
+  }
+
+  // ─── 1. 산업 동향 ───
+  L.push(`## 🏭 1. Tier 1 — 반도체 산업 거시 동향 (Top ${limits.ind}건, 점수순)`);
+  L.push(``);
+  const indSorted=sortItems(S.ind,'relevance').slice(0,limits.ind);
+  const byRegion={};
+  indSorted.forEach(i=>{(byRegion[i.region]=byRegion[i.region]||[]).push(i)});
+  for(const[reg,items] of Object.entries(byRegion)){
+    L.push(`### ${RL[reg]||reg} (${items.length}건)`);
+    items.forEach(i=>{
+      const pri=i._pri?.label||'';
+      const ref=addRef(i);
+      L.push(`- [🎯${i._score||0}] ${pri} ${mdSafe(i.title)}${ref}`);
+      if(opts.tr){
+        const tr=S.tr[hash(i.title)];
+        if(tr){
+          const trans=(tr.text.match(/번역:\s*(.+)/)||[])[1]||'';
+          const sum=(tr.text.match(/요약:\s*(.+)/)||[])[1]||'';
+          if(trans)L.push(`  → ${trans}`);
+          if(sum)L.push(`  💡 ${sum}`);
+        }
+      }
+    });
+    L.push(``);
+  }
+
+  // ─── 2. 소재 동향 ───
+  L.push(`## 🧪 2. Tier 2 — 소재 시장 동향 (Top ${limits.mat}건)`);
+  L.push(``);
+  const matSorted=sortItems(S.mat,'relevance').slice(0,limits.mat);
+  const byCat={};
+  matSorted.forEach(i=>{(byCat[i.category]=byCat[i.category]||[]).push(i)});
+  for(const[cat,items] of Object.entries(byCat)){
+    L.push(`### ${CAT_LABELS[cat]||cat} (${items.length}건)`);
+    items.forEach(i=>{
+      const pri=i._pri?.label||'';
+      const ref=addRef(i);
+      L.push(`- [🎯${i._score||0}] ${pri} ${mdSafe(i.title)}${ref}`);
+      if(opts.tr){
+        const tr=S.tr[hash(i.title)];
+        if(tr){
+          const trans=(tr.text.match(/번역:\s*(.+)/)||[])[1]||'';
+          const sum=(tr.text.match(/요약:\s*(.+)/)||[])[1]||'';
+          if(trans)L.push(`  → ${trans}`);
+          if(sum)L.push(`  💡 ${sum}`);
+        }
+      }
+    });
+    L.push(``);
+  }
+  if(matSorted.length===0)L.push(`_(소재 섹션 수집 0건 — BP Tier 3에서 소재 관련 정보 추출 필요)_\n`);
+
+  // ─── 3. BP Watch ───
+  L.push(`## 🔍 3. Tier 3 — BP Company Watch (Top ${limits.bp}사)`);
+  L.push(``);
+  const ranked=getRankedBpEntries();
+  const bpKr=[],bpCn=[];
+  ranked.slice(0,limits.bp).forEach(({name,data:d,count,topScore})=>{
+    const entry={name,data:d,count,topScore};
+    if(d.region==='CN')bpCn.push(entry); else bpKr.push(entry);
+  });
+
+  L.push(`### 3.1 한국·일본·미국·EU BP (${bpKr.length}사)`);
+  bpKr.forEach(({name,data:d,count,topScore})=>{
+    const star=d.isCnCore?' ⭐':'';
+    const topItem=d.items[0];
+    const ref=topItem?addRef(topItem):'';
+    L.push(`- **${mdSafe(name)}${star}** [${CAT_LABELS[d.cat]||d.cat}${d.region?' · '+d.region:''}] · ${count}건 · Top 🎯${topScore}`);
+    (d.items||[]).slice(0,size==='compact'?1:size==='standard'?2:3).forEach(i=>{
+      L.push(`  - ${mdSafe(i.title)}${i===topItem?ref:''}`);
+    });
+  });
+  L.push(``);
+
+  if(bpCn.length){
+    L.push(`### 3.2 🇨🇳 중국 로컬 BP (${bpCn.length}사)`);
+    bpCn.forEach(({name,data:d,count,topScore})=>{
+      const star=d.isCnCore?' ⭐':'';
+      const topItem=d.items[0];
+      const ref=topItem?addRef(topItem):'';
+      L.push(`- **${mdSafe(name)}${star}** [${CAT_LABELS[d.cat]||d.cat}] · ${count}건 · Top 🎯${topScore}`);
+      (d.items||[]).slice(0,size==='compact'?1:2).forEach(i=>{
+        L.push(`  - ${mdSafe(i.title)}${i===topItem?ref:''}`);
+      });
+    });
+    L.push(``);
+  }else{
+    L.push(`### 3.2 🇨🇳 중국 로컬 BP`);
+    L.push(`_(중국 BP 수집 0건 — BP Mode를 cn-core/cn-all로 변경 후 재수집 권장)_\n`);
+  }
+
+  // ─── 4. SK hynix Intelligence ───
+  L.push(`## 💎 4. SK hynix Intelligence (Top ${limits.hx}건)`);
+  L.push(``);
+  const hxSorted=sortItems(S.hx,'relevance').slice(0,limits.hx);
+  const byFocus={};
+  hxSorted.forEach(i=>{(byFocus[i.focus]=byFocus[i.focus]||[]).push(i)});
+  for(const[foc,items] of Object.entries(byFocus)){
+    L.push(`### ${FL[foc]||foc} (${items.length}건)`);
+    items.forEach(i=>{
+      const pri=i._pri?.label||'';
+      const ref=addRef(i);
+      L.push(`- [🎯${i._score||0}] ${pri} ${mdSafe(i.title)}${ref}`);
+      if(opts.tr){
+        const tr=S.tr[hash(i.title)];
+        if(tr){
+          const trans=(tr.text.match(/번역:\s*(.+)/)||[])[1]||'';
+          const sum=(tr.text.match(/요약:\s*(.+)/)||[])[1]||'';
+          if(trans)L.push(`  → ${trans}`);
+          if(sum)L.push(`  💡 ${sum}`);
+        }
+      }
+    });
+    L.push(``);
+  }
+
+  // ─── 5. 학술 논문 ───
+  if(opts.aca&&S.aca?.length){
+    L.push(`## 📚 5. 학술 논문 (arXiv Top ${limits.aca}편)`);
+    L.push(``);
+    S.aca.slice(0,limits.aca).forEach(p=>{
+      const ref=addRef(p);
+      const date=p.pub?new Date(p.pub).toLocaleDateString('ko-KR'):'';
+      L.push(`- **[${(p.topic||'').toUpperCase()}] ${mdSafe(p.title)}**${ref}`);
+      L.push(`  - ${p.src||'arXiv'} · ${date}`);
+      if(p.summary&&size!=='compact')L.push(`  - 초록: ${p.summary.slice(0,size==='full'?300:150)}`);
+    });
+    L.push(``);
+  }
+
+  // ─── 참고문헌 ───
+  if(opts.ref&&refs.length){
+    L.push(`## 📎 참고문헌 (원문 링크)`);
+    L.push(``);
+    refs.forEach(r=>{
+      L.push(`[${r.idx}] [${r.title.slice(0,70)}${r.title.length>70?'...':''}](${r.link})${r.src?` — ${r.src}`:''}${r.date?` · ${r.date}`:''}`);
+    });
+    L.push(``);
+  }
+
+  L.push(`---`);
+  L.push(`*생성: mSMI v1.8.6 · SK hynix 소재전략 · 이정훈 TL · 내부용*`);
+
+  return L.join('\n');
+}
+
+// 스타일별 프롬프트 블록 생성
+function buildStylePrompt(style,period,opts){
+  const filterNote=opts.filter?`\n\n🚨 **절대 준수**: 사내 시스템명(mTTTM, mRI, Grade 3.0, PCCB, 3중 인터락, pqi, B/C평가, Fast Track, SRI, smartPAM 등) 본문에 절대 사용 금지. 외부 사실 + 중립적 시사점만 작성.`:'';
+
+  const common=`당신은 SK hynix 소재전략팀을 지원하는 반도체 산업 애널리스트입니다. 아래 수집 데이터(${period})를 바탕으로 주간 외부동향 보고서를 작성해주세요.
+
+## 공통 원칙
+- 출처 인용: 구체 사실 언급 시 \`[번호]\` 삽입 (참고문헌 섹션과 연결)
+- 신뢰도 표기 (본문 표에만): ● 공식 확인 / ◐ 업계 통설 / ○ 추정·관측
+- 시사점 톤: "~에 주목할 필요가 있다", "~영향을 미칠 수 있다", "~모니터링이 요구된다" (내부 액션 제안 금지)
+- 한국어 기본, 영문 약어·기업명 원어 그대로${filterNote}`;
+
+  if(style==='dual'){
+    return `# 📝 보고서 작성 요청 — Dual-read (임원+엔지니어)
+
+${common}
+
+## 출력 구조
+1. **📊 Executive Summary** — 금주 핵심 5대 변화 표 + 진영별 한 줄 요약 표
+2. **1. 칩메이커 동향** — SK hynix · 삼성 · MU · 중국 · 파운드리 (각 이슈표 + 서술 3-5문장)
+3. **2. SK hynix 향 소재 BP 동향** — Photo · Chemical · Slurry · PGas · Precursor · 기타 통합 (각 BP표 + 서술)
+4. **3. 🇨🇳 중국 로컬 BP** — 이벤트 표 + 해석 3-5문장
+5. **4. 그 외 BP & 리스크 시그널** — 통합 표
+6. **5. 🔬 소재 중장기 기술 로드맵** — 학술 동향 표 + 소재군별 2-3년 진화 + 전략적 시사점
+7. **6. 참고문헌** — 본문 인용 [번호] 전체
+
+표와 서술을 혼합한 dual-read 구조로, 각 섹션 표는 5-8행, 서술은 3-6문장.`;
+  }
+
+  if(style==='executive'){
+    return `# 📝 보고서 작성 요청 — Executive Brief (경영진 컴팩트)
+
+${common}
+
+## 출력 구조 (표 중심, 서술 최소)
+1. **Executive Summary** — 5대 변화 표 + 진영별 한 줄
+2. **칩메이커 동향** — SK · 삼성 · MU · 중국 각 1페이지
+3. **파운드리** — 표 + 2-3문장
+4. **SK hynix 향 BP 동향** — 소재군별 표
+5. **중국 로컬 BP** — 표 + 2-3문장
+6. **리스크 시그널** — 표만
+7. **참고문헌**
+
+A4 기준 10-15페이지 분량, 표 중심 스캔 가능 구조.`;
+  }
+
+  if(style==='prose'){
+    return `# 📝 보고서 작성 요청 — Prose (줄글 v1.7 호환)
+
+${common}
+
+## 출력 구조 (줄글 중심)
+- 본문은 줄글 — **불릿/번호/표 절대 금지** (소재군별 요약과 참고문헌은 예외)
+- 본문 4개 단락 구성:
+  ① 칩메이커·시장 거시 동향 (SK·삼성·MU·중국·파운드리 통합)
+  ② 소재군별 핵심 이슈 (Photo·Chemical·Slurry·PGas·Precursor 통합)
+  ③ BP사 개별 동향 (KR+JP+US+EU+CN)
+  ④ 리스크 시그널 및 전략적 시사점
+- 소재군별 핵심 요약 (간결 표)
+- 참고문헌
+
+자연스러운 산문 흐름, 단락 간 논리 연결 필수.`;
+  }
+
+  // custom
+  return `# 📝 보고서 작성 요청 — Custom
+
+${common}
+
+아래 데이터를 활용하여 필요한 보고서를 작성해주세요. 특정 지시사항이 없으면 Dual-read 스타일(표+서술 혼합)로 생성합니다.
+
+원하는 보고서 형태가 있다면 이 번들을 붙여넣은 뒤 Claude에게 구체적으로 지시해주세요. 예시:
+- "소재군별 BP 동향에 집중해서 10페이지로 정리해줘"
+- "중국 BP 동향만 별도로 심층 분석해줘"
+- "HBM4/HBM4E 관련 이슈만 추출하여 경쟁사 비교표로 정리해줘"`;
+}
+
+window.regenerateBundle=function(){
+  try{
+    const content=buildBundle();
+    const preview=document.getElementById('bdlPreview');
+    const stat=document.getElementById('bdlStat');
+    const finalStat=document.getElementById('bdlFinalStat');
+    if(preview)preview.value=content;
+    const sizeKB=(content.length/1024).toFixed(1);
+    const lines=content.split('\n').length;
+    const tokenEst=Math.round(content.length/3); // 대략 3 chars per token
+    const statTxt=`${sizeKB} KB · ${lines.toLocaleString()} 줄 · 약 ${tokenEst.toLocaleString()} tokens`;
+    if(stat)stat.textContent=statTxt;
+    if(finalStat)finalStat.textContent=`📊 ${statTxt}`;
+  }catch(e){
+    toast('번들 생성 오류: '+e.message,'err');
+    log(`❌ Bundle 오류: ${e.message}`,'err');
+  }
+};
+
+window.copyBundle=function(){
+  const text=document.getElementById('bdlPreview').value;
+  if(!text){toast('번들 내용 없음','err');return}
+  navigator.clipboard.writeText(text).then(()=>{
+    toast(`Bundle 복사 완료 (${(text.length/1024).toFixed(1)} KB) — Claude 채팅에 붙여넣으세요`,'ok');
+  }).catch(()=>{
+    // fallback: select textarea
+    const ta=document.getElementById('bdlPreview');
+    ta.select();
+    try{
+      document.execCommand('copy');
+      toast('Bundle 복사 완료 (fallback)','ok');
+    }catch(e){
+      toast('복사 실패 — 수동으로 선택·복사 하세요','err');
+    }
+  });
+};
+
+window.downloadBundle=function(){
+  const text=document.getElementById('bdlPreview').value;
+  if(!text){toast('번들 내용 없음','err');return}
+  const b=new Blob([text],{type:'text/markdown'});
+  const a=document.createElement('a');
+  a.href=URL.createObjectURL(b);
+  const date=new Date().toISOString().slice(0,10);
+  a.download=`mSMI_Bundle_${BDL_STATE.size}_${BDL_STATE.style}_${date}.md`;
+  a.click();
+  toast('Bundle .md 파일 다운로드','ok');
+};
+
+// 옵션 체크박스 변경 시 BDL_STATE 동기화 + 재생성
+document.addEventListener('change',e=>{
+  if(e.target.matches('#bdlOptRef,#bdlOptTr,#bdlOptAca,#bdlOptFilter')){
+    BDL_STATE.options={
+      ref:document.getElementById('bdlOptRef')?.checked??true,
+      tr:document.getElementById('bdlOptTr')?.checked??true,
+      aca:document.getElementById('bdlOptAca')?.checked??true,
+      filter:document.getElementById('bdlOptFilter')?.checked??false
+    };
+    regenerateBundle();
+  }
+});
+
 function loadCfg(){
   try{
     // v1.8.2 우선 시도
@@ -1894,7 +2411,7 @@ function compactDataForReport(){
   rankedBp.forEach(({name:n,data:d})=>{const topItem=d.items[0]; const ref=topItem?addRef(topItem):''; const titles=d.items.slice(0,2).map(it=>it.title).join(' / '); const line=`${n} [${CAT_LABELS[d.cat]||d.cat}${d.region?' · '+d.region:''}]: ${titles} ${ref}`; if(d.region==='CN')bpCn.push(line); else bpKr.push(line)});
   const bpKrTop=bpKr.slice(0,20);
   const hx=sortItems(S.hx,'relevance').slice(0,15).map(i=>{const tr=S.tr[hash(i.title)]; const trans=tr?(tr.text.match(/번역:\s*(.+)/)||[])[1]||'':''; const sum=tr?(tr.text.match(/요약:\s*(.+)/)||[])[1]||'':''; const ref=addRef(i); return `[${(i.focus||'').toUpperCase()}|🎯${i._score||0}] ${trans||i.title}${sum?` — ${sum}`:''} ${ref}`});
-  // [v1.8.5] 학술 논문 데이터 추가
+  // [v1.8.6] 학술 논문 데이터 추가
   const aca=(S.aca||[]).slice(0,15).map(p=>{
     const ref=addRef(p);
     const date=p.pub?new Date(p.pub).toLocaleDateString('ko-KR'):'';
@@ -1907,22 +2424,22 @@ function buildReportPromptByStyle(data,style){if(style==='executive') return bui
 function buildPromptDual(data){
   const {matSection,refList,period}=renderDataSection(data); const bpCnSection=data.bpCn.length>0 ? data.bpCn.join('\n') : '(금주 수집된 중국 로컬 BP 관련 기사 없음 — BP Mode를 cn-core/cn-all로 전환 후 재수집 권장)';
   const acaSection=(data.aca&&data.aca.length>0) ? data.aca.join('\n') : '(금주 수집된 학술 논문 없음 — 다음 주기 확인)';
-  return `당신은 SK hynix 소재전략팀을 지원하는 반도체 산업 애널리스트입니다. 아래는 mSMI v1.8.5 시스템이 수집한 1주일간(${period})의 반도체 산업·소재·BP사 동향 + 학술 논문 데이터입니다.\n\n이 데이터를 바탕으로 **"외부동향 심층 분석 보고서 (Dual-read)"**를 작성하세요. 독자는 SK hynix 소재 개발/기술 팀장·파트장·임원·엔지니어이며, 외부 배포는 없으므로 BP명과 민감한 동향도 포함 가능합니다.\n\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n[⚠️ 절대 준수 원칙]\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n1. **외부 사실 + 중립적 시사점만**:\n   - 사내 시스템명(mTTTM, mRI, Grade 3.0, 3중 인터락, PCCB, pqi, B/C평가, Fast Track 등) 본문에 절대 사용 금지\n   - "~를 검토해야 한다", "~체계를 가동해야 한다" 같은 내부 액션 제안 금지\n   - 시사점은 "~에 주목할 필요가 있다", "~영향을 미칠 수 있다", "~모니터링이 요구된다" 수준\n\n2. **구조 — 표 + 서술 dual-read**:\n   - 각 섹션은 **표로 핵심 스캔 + 서술로 깊이 파기** 구조\n   - 표는 5~8행 이내, 서술은 각 섹션 3~6문장\n\n3. **신뢰도 표기 (본문 표에만)**:\n   - ● 공식 확인 (회사 공식 발표, IR 자료, 신뢰 매체)\n   - ◐ 업계 통설 (복수 매체 교차 보도)\n   - ○ 추정/관측 (단일 매체 또는 분석가 의견)\n   - Summary 표에는 신뢰도 표기 생략 (간결성)\n\n4. **출처 인용**: 구체 사실 언급 시 [번호] 삽입\n5. **한국어 기본, 영문 약어·기업명 원어 그대로**\n6. **완결성**: 반드시 마지막 "## 7. 참고문헌" 섹션까지 완전히 작성 — 중간에 끊기지 않도록 주의\n\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n[📋 정확한 출력 구조]\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n# mSMI Weekly Intelligence Report\n**${period} · 내부용**\n\n## 📊 Executive Summary\n\n### 금주 핵심 5대 변화\n| # | 구분 | 핵심 변화 | 영향도 |\n|---|------|----------|-------|\n\n### 메모리 vs 파운드리 vs 중국 — 한 줄 요약\n| 진영 | 핵심 움직임 |\n|------|-------|\n| SK hynix | ... |\n| 삼성전자 | ... |\n| 마이크론 | ... |\n| 중국 메모리 (CXMT·YMTC) | ... |\n| 파운드리 (TSMC·Intel·SMIC) | ... |\n\n---\n\n## 1. 칩메이커 동향\n### 1.1 SK hynix\n| 이슈 | 동향 | 신뢰도 | 소재 관점 함의 |\n\n### 1.2 삼성전자 / 1.3 마이크론 / 1.4 중국 메모리\n(각 동일 구조, 간결하게)\n\n### 1.5 파운드리 (TSMC·Intel·SMIC) — 요약\n\n## 2. SK hynix 향 주요 소재 BP 동향\n### 2.1 Photo / 2.2 Chemical / 2.3 Slurry / 2.4 Process Gas / 2.5 Precursor\n(각 섹션: BP | 국적 | 금주 동향 | 신뢰도 | 관전 포인트 표 + 서술 3~5문장)\n### 2.6 Wafer / Target / PAD / WLP — 통합 요약 표\n\n## 3. 🇨🇳 중국 로컬 소재 BP 동향\n### 3.1 금주 이벤트 표 / 3.2 해석 (3~5문장)\n\n## 4. 그 외 BP & 리스크 시그널 (통합)\n| 항목 | 현황 | 잠재 영향 | 신뢰도 |\n\n## 5. 🔬 소재 중장기 기술 로드맵 (신규)\n**이 섹션은 학술 논문 + 산업 기술 동향을 종합하여 향후 2-3년 소재 기술 진화 방향을 정리하세요.**\n\n### 5.1 금주 주목 학술 동향\n| 토픽 | 핵심 내용 | 시사점 | [Ref] |\n|------|----------|-------|-------|\n(arXiv 수집 논문 중 소재 기술 관점 핵심 3-5건 표 정리)\n\n### 5.2 소재군별 기술 진화 방향 (2-3년 관점)\n- **Photo**: EUV 차세대 PR, High-NA 대응, PFAS-free, MOR 등 흐름 (2-3문장)\n- **Chemical**: 극초순수 요구 강화, PFAS 규제 대응, 친환경 공정 전환 (2-3문장)\n- **Slurry/CMP**: HBM 적층 고도화 대응, Hybrid Bonding용 신규 슬러리 (2-3문장)\n- **Precursor**: 3nm 이하 GAA 공정, High-k 신규 물질, 원자층 제어 정밀도 (2-3문장)\n- **HBM 패키징**: TC-NCF, MR-MUF 진화, Hybrid Bonding 전환 시점 (2-3문장)\n\n### 5.3 전략적 시사점 (3-5문장 서술)\n(학술+산업 동향을 연결하여 소재 BP 포트폴리오 재편 방향 모니터링 포인트 제시 — 내부 액션 제안 금지)\n\n## 6. 참고문헌\n(본문에 실제 인용된 [번호]만 나열 · 논문은 [Ref-A]~[Ref-E] 별도 표기)\n\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n[📥 입력 데이터]\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n[데이터 1] 반도체 산업 거시 동향 (점수순 Top 30)\n${data.ind.join('\n')}\n\n[데이터 2] 소재군별 동향 (각 Top 5)\n${matSection}\n\n[데이터 3-KR] 한국·일본·미국·EU BP 주요 동향 (언급량 Top 20)\n${data.bpKr.join('\n')}\n\n[데이터 3-CN] 중국 로컬 BP 동향\n${bpCnSection}\n\n[데이터 4] SK hynix·경쟁사·시장 동향\n${data.hx.join('\n')}\n\n[데이터 5] 📚 학술 논문 (arXiv 최신 15편)\n${acaSection}\n\n[참고문헌 원본]\n${refList}\n\n첫 줄부터 바로 "# mSMI Weekly..."로 시작하세요. 표는 Markdown 형식, 신뢰도는 ●/◐/○ 이모지 그대로 사용. 사내 시스템명 절대 포함 금지. 반드시 참고문헌 섹션까지 완성하세요.`;
+  return `당신은 SK hynix 소재전략팀을 지원하는 반도체 산업 애널리스트입니다. 아래는 mSMI v1.8.6 시스템이 수집한 1주일간(${period})의 반도체 산업·소재·BP사 동향 + 학술 논문 데이터입니다.\n\n이 데이터를 바탕으로 **"외부동향 심층 분석 보고서 (Dual-read)"**를 작성하세요. 독자는 SK hynix 소재 개발/기술 팀장·파트장·임원·엔지니어이며, 외부 배포는 없으므로 BP명과 민감한 동향도 포함 가능합니다.\n\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n[⚠️ 절대 준수 원칙]\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n1. **외부 사실 + 중립적 시사점만**:\n   - 사내 시스템명(mTTTM, mRI, Grade 3.0, 3중 인터락, PCCB, pqi, B/C평가, Fast Track 등) 본문에 절대 사용 금지\n   - "~를 검토해야 한다", "~체계를 가동해야 한다" 같은 내부 액션 제안 금지\n   - 시사점은 "~에 주목할 필요가 있다", "~영향을 미칠 수 있다", "~모니터링이 요구된다" 수준\n\n2. **구조 — 표 + 서술 dual-read**:\n   - 각 섹션은 **표로 핵심 스캔 + 서술로 깊이 파기** 구조\n   - 표는 5~8행 이내, 서술은 각 섹션 3~6문장\n\n3. **신뢰도 표기 (본문 표에만)**:\n   - ● 공식 확인 (회사 공식 발표, IR 자료, 신뢰 매체)\n   - ◐ 업계 통설 (복수 매체 교차 보도)\n   - ○ 추정/관측 (단일 매체 또는 분석가 의견)\n   - Summary 표에는 신뢰도 표기 생략 (간결성)\n\n4. **출처 인용**: 구체 사실 언급 시 [번호] 삽입\n5. **한국어 기본, 영문 약어·기업명 원어 그대로**\n6. **완결성**: 반드시 마지막 "## 7. 참고문헌" 섹션까지 완전히 작성 — 중간에 끊기지 않도록 주의\n\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n[📋 정확한 출력 구조]\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n# mSMI Weekly Intelligence Report\n**${period} · 내부용**\n\n## 📊 Executive Summary\n\n### 금주 핵심 5대 변화\n| # | 구분 | 핵심 변화 | 영향도 |\n|---|------|----------|-------|\n\n### 메모리 vs 파운드리 vs 중국 — 한 줄 요약\n| 진영 | 핵심 움직임 |\n|------|-------|\n| SK hynix | ... |\n| 삼성전자 | ... |\n| 마이크론 | ... |\n| 중국 메모리 (CXMT·YMTC) | ... |\n| 파운드리 (TSMC·Intel·SMIC) | ... |\n\n---\n\n## 1. 칩메이커 동향\n### 1.1 SK hynix\n| 이슈 | 동향 | 신뢰도 | 소재 관점 함의 |\n\n### 1.2 삼성전자 / 1.3 마이크론 / 1.4 중국 메모리\n(각 동일 구조, 간결하게)\n\n### 1.5 파운드리 (TSMC·Intel·SMIC) — 요약\n\n## 2. SK hynix 향 주요 소재 BP 동향\n### 2.1 Photo / 2.2 Chemical / 2.3 Slurry / 2.4 Process Gas / 2.5 Precursor\n(각 섹션: BP | 국적 | 금주 동향 | 신뢰도 | 관전 포인트 표 + 서술 3~5문장)\n### 2.6 Wafer / Target / PAD / WLP — 통합 요약 표\n\n## 3. 🇨🇳 중국 로컬 소재 BP 동향\n### 3.1 금주 이벤트 표 / 3.2 해석 (3~5문장)\n\n## 4. 그 외 BP & 리스크 시그널 (통합)\n| 항목 | 현황 | 잠재 영향 | 신뢰도 |\n\n## 5. 🔬 소재 중장기 기술 로드맵 (신규)\n**이 섹션은 학술 논문 + 산업 기술 동향을 종합하여 향후 2-3년 소재 기술 진화 방향을 정리하세요.**\n\n### 5.1 금주 주목 학술 동향\n| 토픽 | 핵심 내용 | 시사점 | [Ref] |\n|------|----------|-------|-------|\n(arXiv 수집 논문 중 소재 기술 관점 핵심 3-5건 표 정리)\n\n### 5.2 소재군별 기술 진화 방향 (2-3년 관점)\n- **Photo**: EUV 차세대 PR, High-NA 대응, PFAS-free, MOR 등 흐름 (2-3문장)\n- **Chemical**: 극초순수 요구 강화, PFAS 규제 대응, 친환경 공정 전환 (2-3문장)\n- **Slurry/CMP**: HBM 적층 고도화 대응, Hybrid Bonding용 신규 슬러리 (2-3문장)\n- **Precursor**: 3nm 이하 GAA 공정, High-k 신규 물질, 원자층 제어 정밀도 (2-3문장)\n- **HBM 패키징**: TC-NCF, MR-MUF 진화, Hybrid Bonding 전환 시점 (2-3문장)\n\n### 5.3 전략적 시사점 (3-5문장 서술)\n(학술+산업 동향을 연결하여 소재 BP 포트폴리오 재편 방향 모니터링 포인트 제시 — 내부 액션 제안 금지)\n\n## 6. 참고문헌\n(본문에 실제 인용된 [번호]만 나열 · 논문은 [Ref-A]~[Ref-E] 별도 표기)\n\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n[📥 입력 데이터]\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n[데이터 1] 반도체 산업 거시 동향 (점수순 Top 30)\n${data.ind.join('\n')}\n\n[데이터 2] 소재군별 동향 (각 Top 5)\n${matSection}\n\n[데이터 3-KR] 한국·일본·미국·EU BP 주요 동향 (언급량 Top 20)\n${data.bpKr.join('\n')}\n\n[데이터 3-CN] 중국 로컬 BP 동향\n${bpCnSection}\n\n[데이터 4] SK hynix·경쟁사·시장 동향\n${data.hx.join('\n')}\n\n[데이터 5] 📚 학술 논문 (arXiv 최신 15편)\n${acaSection}\n\n[참고문헌 원본]\n${refList}\n\n첫 줄부터 바로 "# mSMI Weekly..."로 시작하세요. 표는 Markdown 형식, 신뢰도는 ●/◐/○ 이모지 그대로 사용. 사내 시스템명 절대 포함 금지. 반드시 참고문헌 섹션까지 완성하세요.`;
 }
 function buildPromptExecutive(data){const {matSection,refList,period}=renderDataSection(data); const bpCnSection=data.bpCn.length>0 ? data.bpCn.join('\n') : '(중국 BP 데이터 없음)'; return `당신은 SK hynix 임원 보고용 반도체 산업 애널리스트입니다. 수집 데이터(${period})를 바탕으로 **컴팩트 임원 보고서**를 작성하세요.\n\n[원칙]\n- 사내 시스템명(mTTTM, mRI, Grade 3.0, PCCB 등) 절대 금지\n- 표 중심, 서술 최소화\n- 외부 사실 + 중립적 시사점만\n- 신뢰도 표기: ●/◐/○\n- [번호] 출처 인용 필수\n\n[구조]\n1. Executive Summary — 5대 변화 표 + 진영별 한 줄\n2. 칩메이커 동향 — SK·삼성·MU·중국 각 1페이지\n3. 파운드리 — 표 + 2~3문장\n4. SK hynix 향 BP 동향 — 소재군별 표\n5. 중국 로컬 BP — 표 + 2~3문장\n6. 리스크 시그널 — 표만\n7. 참고문헌\n\n[데이터]\n산업:\n${data.ind.join('\n')}\n소재군:\n${matSection}\nBP-KR:\n${data.bpKr.join('\n')}\nBP-CN:\n${bpCnSection}\nSKH+경쟁:\n${data.hx.join('\n')}\n\n[참고문헌]\n${refList}\n\n"# mSMI Executive Brief"로 시작하세요.`}
 function buildPromptProse(data){const {matSection,refList,period}=renderDataSection(data); return `당신은 반도체 산업 애널리스트입니다. 아래는 자동화 시스템이 수집한 1주일간(${period})의 반도체 산업·소재·협력사 동향 데이터입니다. 이를 바탕으로 "외부동향 모니터링" 보고서를 작성하세요.\n\n[작성 원칙]\n1. 본문은 줄글 — 불릿/번호/표 절대 금지 (소재군별 요약과 참고문헌은 예외)\n2. 본문 4개 단락 + 소재군별 핵심 요약 + 참고문헌\n3. 외부 사실 + 중립적 시사점만 — 사내 시스템명 절대 금지\n4. [번호] 출처 인용 필수\n\n[데이터]\n산업:\n${data.ind.join('\n')}\n소재군:\n${matSection}\nBP:\n${[...data.bpKr,...data.bpCn].join('\n')}\nSKH+경쟁:\n${data.hx.join('\n')}\n\n[참고문헌]\n${refList}\n\n첫 문장부터 바로 본문 시작.`}
 async function callClaudeWithModel(prompt,model,maxTokens=2500){
   const cfg=loadCfg(); const body={model,max_tokens:maxTokens,messages:[{role:'user',content:prompt}]}; let url,headers={'Content-Type':'application/json'};
   if(cfg.aiMode==='cf'&&cfg.aiCfUrl){url=cfg.aiCfUrl}else{url='https://api.anthropic.com/v1/messages'; headers['x-api-key']=cfg.aiKey; headers['anthropic-version']='2023-06-01'; headers['anthropic-dangerous-direct-browser-access']='true';}
-  // [v1.8.5] timeout 120s → 180s (긴 보고서 대응)
-  const resp=await fetch(url,{method:'POST',headers,body:JSON.stringify(body),signal:AbortSignal.timeout(180000)}); if(!resp.ok){const t=await resp.text(); throw new Error(`API ${resp.status}: ${t.slice(0,150)}`)} const d=await resp.json(); return d.content?.[0]?.text||'';
+  // [v1.8.6] timeout 180s → 120s (iPad Safari 안정성; 초과 생성은 Bundle 권장)
+  const resp=await fetch(url,{method:'POST',headers,body:JSON.stringify(body),signal:AbortSignal.timeout(120000)}); if(!resp.ok){const t=await resp.text(); throw new Error(`API ${resp.status}: ${t.slice(0,150)}`)} const d=await resp.json(); return d.content?.[0]?.text||'';
 }
 async function weeklyReport(){
   if(wrInFlight){alert('이미 생성 중입니다. 잠시 후 다시 시도하세요.');return}
   const cfg=loadCfg();
   if(cfg.aiMode==='off'||(cfg.aiMode==='direct'&&!cfg.aiKey)){alert('주간보고 생성에는 Claude API가 필요합니다.\n설정 → API Key 입력');return}
   if(S.ind.length===0&&S.mat.length===0){alert('먼저 ⟳ Refresh를 눌러 데이터를 수집하세요.');return}
-  const style=cfg.rptStyle||'dual'; const styleLabel={executive:'경영진 컴팩트',dual:'Dual-read (임원+엔지니어)',prose:'줄글 (v1.7 호환)'}[style]; const maxTokens={executive:4000,dual:12000,prose:3500}[style]; const costEst={executive:150,dual:450,prose:100}[style];
+  const style=cfg.rptStyle||'dual'; const styleLabel={executive:'경영진 컴팩트',dual:'Dual-read (임원+엔지니어)',prose:'줄글 (v1.7 호환)'}[style]; const maxTokens={executive:3500,dual:8000,prose:3500}[style]; const costEst={executive:150,dual:350,prose:100}[style];
   const totalItems=S.ind.length+S.mat.length+S.hx.length+Object.keys(S.bp).length;
   if(!confirm(`주간보고 초안을 생성합니다.\n\n· 스타일: ${styleLabel}\n· 입력 데이터: ${totalItems}건 압축\n· 모델: Sonnet 4.6\n· 예상 비용: ≈${costEst}원\n· 소요 시간: ${style==='dual'?'45~90초':'20~40초'}\n\n진행?`))return;
   wrText=''; wrRefs=[]; wrInFlight=true; document.getElementById('wrModal').classList.add('on'); document.getElementById('wrMeta').textContent=`Sonnet 4.6 · ${styleLabel} 생성 중...`; document.getElementById('wrCost').textContent=`예상 비용: ≈${costEst}원`; document.getElementById('wrBody').innerHTML=`<div class="modal-loading"><div class="spin"></div><br>Sonnet 4.6가 1주일치 데이터를 읽고 <b>${escapeHtml(styleLabel)}</b> 생성 중...<br><span style="font-size:11px;color:var(--muted)">${style==='dual'?'45~90초':'20~40초'} 소요</span></div>`;
@@ -1981,7 +2498,7 @@ function markdownToHtml(md, refMap){
 }
 function goHome(){document.querySelectorAll('.tab').forEach(x=>x.classList.remove('on')); document.querySelectorAll('.tc').forEach(x=>x.classList.remove('on')); document.querySelector('[data-t="industry"]').classList.add('on'); document.getElementById('t-industry').classList.add('on'); window.scrollTo({top:0,behavior:'smooth'})}
 
-// [v1.8.5] 가이드 아코디언 토글
+// [v1.8.6] 가이드 아코디언 토글
 window.toggleGuide=function(el,ev){
   if(ev&&ev.target&&(ev.target.closest('a')||ev.target.closest('button')))return;
   if(!el.classList.contains('guide-acc'))return;
@@ -2029,16 +2546,25 @@ window.runDebugCheck=async function(){
 function renderDebugResults(results){return results.map(r=>{const cls=r.status==='ok'?'debug-ok':r.status==='warn'?'debug-warn':'debug-err'; const icon=r.status==='ok'?'✅':r.status==='warn'?'⚠️':'❌'; return `<div class="debug-item"><span>${icon} ${escapeHtml(r.label)}</span><span class="${cls}">${escapeHtml(r.msg)}</span></div>`}).join('')}
 
 (function(){
-  // [v1.8.2] 함수를 window에 등록 — Debug 검증 및 strict-mode 호환
-  ['rInd','rMat','rBp','rHx','renderTr','newsHtml','weeklyReport','buildPromptDual','buildPromptExecutive','buildPromptProse','compactDataForReport','markdownToHtml','autoTagPriority','toast','saveResultsCache','loadResultsCache','renderFailedBpPanel','refreshAll','exportMd','fullExport','clearTrCache','testAI','saveCfg','goHome','quickProxyPing','restoreFromCache','fetchAcademic','fetchArxiv','parseArxivAtom','toggleGuide'].forEach(fn=>{
+  // [v1.8.6] 함수 + 주요 데이터 객체를 window에 등록 — Debug 검증 / 테스트 / 디버깅 편의
+  // 함수 등록
+  ['rInd','rMat','rBp','rHx','renderTr','newsHtml','weeklyReport','buildPromptDual','buildPromptExecutive','buildPromptProse','compactDataForReport','markdownToHtml','autoTagPriority','toast','saveResultsCache','loadResultsCache','renderFailedBpPanel','refreshAll','exportMd','fullExport','clearTrCache','testAI','saveCfg','goHome','quickProxyPing','restoreFromCache','fetchAcademic','fetchArxiv','parseArxivAtom','toggleGuide','showBundleMenu','closeBundle','selectBundleSize','selectBundleStyle','regenerateBundle','copyBundle','downloadBundle','buildBundle','buildStylePrompt'].forEach(fn=>{
     try{if(typeof eval(fn)==='function')window[fn]=eval(fn)}catch(e){}
   });
+  // [v1.8.6] 주요 상수·state 객체 노출 (디버깅 및 외부 점검 가능)
+  try{
+    window.S=S; window.BP=BP; window.BP_META=BP_META;
+    window.IQ=IQ; window.MQ=MQ; window.HQ=HQ; window.AQ=AQ;
+    window.CAT_LABELS=CAT_LABELS; window.PROXIES=PROXIES;
+    window.RL=RL; window.FL=FL;
+    window.BDL_STATE=BDL_STATE;
+  }catch(e){console.warn('데이터 노출 실패:',e.message)}
   const c=loadCfg(); ['px1','px2','bpMode','autoR','tout','aiMode','aiKey','aiCfUrl','aiModel','autoTr','autoTrN','noiseKw','kwHigh','kwMid','kwLow','kwNeg','rptStyle'].forEach(k=>{const el=document.getElementById(k); if(el&&c[k]!==undefined)el.value=c[k]});
   document.getElementById('aiKeyRow').style.display=c.aiMode==='direct'?'flex':'none'; document.getElementById('aiCfRow').style.display=c.aiMode==='cf'?'flex':'none';
   setupAR(c.autoR); updateCacheStats(); checkApiBanner(); updateDynamicMeta();
-  // [v1.8.5] 캐시 복원 시 빈 캐시는 자동 스킵됨 (restoreFromCache 내부 처리)
+  // [v1.8.6] 캐시 복원 시 빈 캐시는 자동 스킵됨 (restoreFromCache 내부 처리)
   if(restoreFromCache()){updateCacheIndicator()}
-  log(`📦 mSMI v1.8.5 로드 완료`,'info'); log(`   BP: 총 ${BP_META.total}사 (기존 ${BP_META.kr} + 중국 ${BP_META.cn}, ⭐ 핵심 ${BP_META.cnCore})`,'info'); log(`   모드: ${c.bpMode} / 예상 RSS ${estimateTotalRSS()}회 / 번역 Top${c.autoTrN}×3탭`,'info'); log(`   💡 v1.8.5 긴급 패치: 프록시 3단 폴백 · 헬스체크 사전 점검 · 빈 캐시 방지`,'info'); log(`   💡 설정 → BP Mode 변경 / "🔧 Debug 자동 검증"으로 문제 진단 가능`,'info');
+  log(`📦 mSMI v1.8.6 로드 완료`,'info'); log(`   BP: 총 ${BP_META.total}사 (기존 ${BP_META.kr} + 중국 ${BP_META.cn}, ⭐ 핵심 ${BP_META.cnCore})`,'info'); log(`   모드: ${c.bpMode} / 예상 RSS ${estimateTotalRSS()}회 / 번역 Top${c.autoTrN}×3탭`,'info'); log(`   🎯 v1.8.6: Report Bundle 중심 아키텍처 — Claude 채팅용 최적화 번들 생성`,'info'); log(`   💡 Refresh 후 🎁 Bundle 버튼 → 크기·스타일 선택 → 클립보드 복사 → Claude에 붙여넣기`,'info');
 })();
 </script>
 </body>
